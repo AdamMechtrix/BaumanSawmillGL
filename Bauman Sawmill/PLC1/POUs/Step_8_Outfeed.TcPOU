@@ -1,0 +1,106 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="Step_8_Outfeed" Id="{164f23e4-e886-4aca-984d-e8e72a062bab}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM Step_8_Outfeed
+VAR
+// ------------triggers-----------------	
+rtPullRope_8 : R_TRIG;
+
+
+
+//--------safety---------------------
+LocalSafety_8: BOOL;
+	
+	
+	
+	
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[
+
+//----------------------Safety--------------------
+
+LocalSafety_8 := OutFeedConveyorMMP;
+
+
+//---------------------Defaults-------------------
+
+
+rtPullRope_8(CLK := OutfeedRopePull);
+
+
+// Stop button or lost permissive or lost local safety → go to IDLE immediately
+IF CycleStopPB OR NOT Permissive THEN
+    Step5_State := 0; // IDLE
+END_IF	
+
+
+
+// ----------------------------------- Manual override (when AutoMode = FALSE) ---------------------------------------
+IF NOT AutoMode THEN
+    OutFeedConveyorFWD := FALSE;
+	
+    IF Permissive AND LocalSafety_8 THEN
+        // Only run FWD if REV jog is NOT pressed
+        IF OutFeedConveyorFWD THEN
+            GradingVFD2FWD := TRUE;
+		ELSE
+			OutFeedConveyorFWD := FALSE;
+        END_IF
+
+    END_IF;
+
+    RETURN;
+END_IF
+
+
+
+//--------------------------AutoMode---------------------------------------------------------------------------
+CASE Step8_State OF
+
+0: // Stopped  
+
+
+OutFeedConveyorFWD := FALSE;
+
+
+IF CycleStartPB OR rtPullRope_8.Q THEN
+    Step5_State := 5; // IDLE
+END_IF	
+
+
+5: // Running/Standby
+   
+OutFeedConveyorFWD := TRUE;
+
+IF rtPullRope_8.Q THEN
+	Step5_State := 0;
+
+END_IF
+
+
+
+
+
+END_CASE;
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="Step_8_Outfeed">
+      <LineId Id="6" Count="1" />
+      <LineId Id="14" Count="5" />
+      <LineId Id="28" Count="14" />
+      <LineId Id="100" Count="0" />
+      <LineId Id="45" Count="3" />
+      <LineId Id="108" Count="1" />
+      <LineId Id="49" Count="0" />
+      <LineId Id="54" Count="23" />
+      <LineId Id="85" Count="0" />
+      <LineId Id="110" Count="0" />
+      <LineId Id="86" Count="9" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

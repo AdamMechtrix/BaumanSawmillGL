@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <Task Name="PlcTask" Id="{bff551d7-002f-492a-ab81-d0a40efec05e}">
+    <!--CycleTime in micro seconds.-->
+    <CycleTime>10000</CycleTime>
+    <Priority>20</Priority>
+    <PouCall>
+      <Name>MAIN</Name>
+    </PouCall>
+    <PouCall>
+      <Name>Step_1_TiltHoist</Name>
+    </PouCall>
+    <PouCall>
+      <Name>Step_2_StickMachine</Name>
+    </PouCall>
+    <PouCall>
+      <Name>Step_3_Unscrambler</Name>
+    </PouCall>
+    <PouCall>
+      <Name>Step_4_EvenEnder</Name>
+    </PouCall>
+    <PouCall>
+      <Name>Servo_Details</Name>
+    </PouCall>
+    <PouCall>
+      <Name>Step_5_Grading</Name>
+    </PouCall>
+    <PouCall>
+      <Name>Step_6_Log_Sequence</Name>
+    </PouCall>
+    <PouCall>
+      <Name>Step_7_Saw_Positioning</Name>
+    </PouCall>
+    <PouCall>
+      <Name>Step_8_Outfeed</Name>
+    </PouCall>
+    <TaskFBGuid>{861bd577-b350-4f82-aad7-d5ab3cdfe0e7}</TaskFBGuid>
+    <Fb_init>{c64cba43-4204-470a-9466-c241ad332dd0}</Fb_init>
+    <Fb_exit>{3f585956-228e-4585-8ed4-2616d1e679a9}</Fb_exit>
+    <CycleUpdate>{10435bf1-b2ea-4807-833e-310ec223c80b}</CycleUpdate>
+    <PostCycleUpdate>{aeeb8db7-5ad5-4aec-92e8-8ff15e5da10e}</PostCycleUpdate>
+  </Task>
+</TcPlcObject>

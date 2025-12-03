@@ -1,0 +1,224 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="Servo_Details" Id="{ab95e85b-3809-42ab-859a-cf0d189cc5e8}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM Servo_Details
+VAR
+	
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// -----------------------------------Motion--------------------------------------
+//Read Status
+	GVL_Axes.Axis1.ReadStatus();
+
+
+//Enable
+	IF xControlPower THEN
+		xEnable := TRUE;
+	ELSE
+		xEnable := FALSE;	
+	END_IF
+
+fbMC_Power1(
+		Axis:= GVL_Axes.Axis1, 
+		Enable:= xEnable, // Typically controlled by the machine control power or something similar
+		Enable_Positive:= xEnable, // should be tied to front and back limit switches, if limit true then one direction should be false.-------------------------------------------MODIFY-----------------------
+		Enable_Negative:= xEnable, 
+		Override:= 100);  //It’s like a “speed knob” that adjusts all moves without rewriting motion commands. Feedrate override — scales all commanded velocities by this percentage.Type: LREAL (real number, typically 0–100%)
+
+
+(*		BufferMode:= , Determines how new motion commands are handled when another one is already active.
+		Options:= , 
+		Status=> , Reports that the axis is successfully enabled.
+		Busy=> , Indicates the function block is currently executing the command.
+		Error=> , Goes TRUE when the function block or NC reports an error.
+		ErrorID=> ); Numerical error code providing details about what failed.Always log ErrorID when troubleshooting — it’s your direct clue.
+*)
+
+
+
+//Reset
+
+IF xMachineReset THEN
+	xAxisReset := TRUE;
+ELSE
+	xAxisReset := FALSE;
+END_IF
+
+
+
+
+fbMC_Reset1(
+	Axis:= GVL_Axes.Axis1, 
+	Execute:= xAxisReset AND GVL_Axes.Axis1.Status.Error); // command will not be issued unless there is an error
+	
+
+(*	
+	Done=> , //TRUE for one cycle when reset completes
+	Busy=> , //TRUE while reset is running
+	Error=> , //TRUE if reset fails
+	ErrorID=> ); //Motion library error code		
+*)		
+	
+	
+//Move_Relative
+
+
+fbMC_MoveRelative1(
+		Axis:= GVL_Axes.Axis1, 
+		Execute:= xExecuteDistanceRel, // Rising edge (FALSE → TRUE) starts the relative move. Keep it TRUE while you want the command to remain active; drop it to FALSE after Done or Error if you’re pulsing it.
+		Distance:= lrDistance, //Units are whatever your axis units are (e.g. mm, degrees, revs). Positive = forward, negative = reverse. Target = ActPos + Distance.
+		Velocity:= 5.0); //Peak speed of your move. Needs to be within axis limits; too high can cause faults or be clamped.
+(*
+		Acceleration:= , //How fast it ramps up to Velocity. Too high → potential following error / torque limits. Too low → sluggish motion.
+		Deceleration:= , //How fast it slows down from Velocity to 0. Similar considerations as Accel.
+		Jerk:= , //Optional. If supported, higher jerk = sharper ramps; lower jerk = smoother, more gentle motion. Often set to 0 or a default at first.
+		BufferMode:= , //mcAborting (default: stop current then do this), mcBuffered (queue after current), mcBlendingLow / mcBlendingPrevious (smooth transitions). For simple testing, stick with mcAborting.
+		Options:= , 
+		Done=> , //TRUE when the move has reached its target and the command is complete. Typically goes TRUE for at least one cycle.
+		Busy=> , //TRUE from the moment the move starts until it’s finished or aborted. If Busy = TRUE, the command is still active.
+		Active=> , //TRUE while this specific move is the one controlling the axis. Useful if you chain/buffer multiple moves.
+		CommandAborted=> , //TRUE if the move got cancelled by another command (Stop, new move with mcAborting, etc.). Not an error — just means “I was told to stop early.”
+		Error=> , //TRUE if something went wrong (limit reached, following error, accel/velocity too high, drive fault, etc.).
+		ErrorID=> ); //Tells you what error occurred. Log or show this in HMI; use docs to decode (e.g. following error, limit exceeded, axis not enabled, etc.).
+*)
+
+
+
+
+//Move_Absolute
+
+fbMove_Absolute1(
+		Axis:= GVL_Axes.Axis1, 
+		Execute:= xExecuteDistanceAbs1, 
+		Position:= lrTargetPosition, 
+		Velocity:= 1.0, 
+		Acceleration:= , 
+		Deceleration:= , 
+		Jerk:= , 
+		BufferMode:= , 
+		Options:= , 
+		Done=> xMoveAbsDone1, 
+		Busy=> xMoveAbsBusy1, 
+		Active=> , 
+		CommandAborted=> , 
+		Error=> , 
+		ErrorID=> );		
+		
+	
+		
+//Move_Velocity
+
+fbMC_MoveVelocity1(
+		Axis:= GVL_Axes.Axis1 , 
+		Execute:= xExecuteMoveVelocity1, 
+		Velocity:= 250, 
+		Acceleration:= , 
+		Deceleration:= , 
+		Jerk:= , 
+		Direction:= , 
+		BufferMode:= , 
+		Options:= , 
+		InVelocity=> , 
+		Busy=> , 
+		Active=> , 
+		CommandAborted=> , 
+		Error=> , 
+		ErrorID=> );
+		
+//MC_Halt 
+
+fbMC_Halt(
+	Axis:= GVL_Axes.Axis1, //MC_Halt = “panic brake, then let go.” Even if held TRUE, move executions can still go TRUE.
+	Execute:= xExecuteHalt1, 
+	Deceleration:= , 
+	Jerk:= , 
+	BufferMode:= , 
+	Options:= , 
+	Done=> , 
+	Busy=> , 
+	Active=> , 
+	CommandAborted=> , 
+	Error=> , 
+	ErrorID=> );
+//MC_Stop
+
+fbMC_Stop1( //Typically used for E-Stop
+	Axis:= GVL_Axes.Axis1, //If MC_Stop.Execute stays TRUE, it keeps the axis locked
+	Execute:= xExecuteStop1,
+	Deceleration:= , 
+	Jerk:= , 
+	Options:= , 
+	Done=> , 
+	Busy=> , 
+	Active=> , 
+	CommandAborted=> , 
+	Error=> , 
+	ErrorID=> );
+	
+
+//MC_Jog
+
+fbMC_MoveJog1(
+	Axis:= GVL_Axes.Axis1, 
+	JogForward:= xJogForward, 
+	JogBackwards:= xJogBackwards, 
+	Mode:= E_JogMode.MC_JOGMODE_STANDARD_SLOW, 
+	Position:= , 
+	Velocity:= , 
+	Acceleration:= , 
+	Deceleration:= , 
+	Jerk:= , 
+	Done=> , 
+	Busy=> , 
+	Active=> , 
+	CommandAborted=> , 
+	Error=> , 
+	ErrorID=> );
+	
+
+//MC_Home
+
+fbMC_Home1(
+	Axis:= GVL_Axes.Axis1, 
+	Execute:= xExecuteHome1, 
+	Position:= DEFAULT_HOME_POSITION, 
+	HomingMode:= MC_Direct, 
+	BufferMode:= , 
+	Options:= , 
+	bCalibrationCam:= , 
+	Done=> , 
+	Busy=> , 
+	Active=> , 
+	CommandAborted=> , 
+	Error=> , 
+	ErrorID=> );
+	
+	
+	]]></ST>
+    </Implementation>
+    <LineIds Name="Servo_Details">
+      <LineId Id="41" Count="2" />
+      <LineId Id="45" Count="25" />
+      <LineId Id="77" Count="0" />
+      <LineId Id="294" Count="13" />
+      <LineId Id="78" Count="0" />
+      <LineId Id="93" Count="6" />
+      <LineId Id="106" Count="94" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="201" Count="0" />
+      <LineId Id="206" Count="0" />
+      <LineId Id="202" Count="0" />
+      <LineId Id="208" Count="0" />
+      <LineId Id="210" Count="14" />
+      <LineId Id="207" Count="0" />
+      <LineId Id="225" Count="0" />
+      <LineId Id="227" Count="0" />
+      <LineId Id="226" Count="0" />
+      <LineId Id="229" Count="0" />
+      <LineId Id="231" Count="12" />
+      <LineId Id="228" Count="0" />
+      <LineId Id="203" Count="2" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

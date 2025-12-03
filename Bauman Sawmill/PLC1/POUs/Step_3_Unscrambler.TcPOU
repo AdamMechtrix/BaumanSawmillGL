@@ -1,0 +1,205 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="Step_3_Unscrambler" Id="{1a306e62-b41c-4655-9517-45b7bfa4b7f1}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM Step_3_Unscrambler // Unscrambler
+VAR
+	//--------------------Internals--------------------
+		LocalSafety_3  : BOOL;
+    	tBoardDetect_3   : TON;   // duration before unscrambler stops
+		
+	
+	
+	
+	
+	//----------------------Manual Mode---------------------------	
+ 		JOGUnscramblerVFD1FWD : BOOL; //HMI
+		JOGUnscramblerVFD1REV : BOOL;
+	
+		// Edge detectors
+   	 	rtTiltHoistOptical_3 : R_TRIG;      // Rising edge on tilt hoist optical sensor
+   		
+
+	
+	// duration of idle tilt hoist to stop unscrambler	
+	tHoistIdle_3: TON;  
+	tStopStep3: TON;
+	
+	
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// ---------- local safety ----------
+
+LocalSafety_3 := NOT VFD1Faulted;
+
+
+
+// ---------- defaults ----------
+Step3_RedFlash     := FALSE;
+Step3_RedSteady    := FALSE;
+Step3_YellowSteady := FALSE;
+Step3_YellowFlash  := FALSE;
+Step3_GreenSteady  := FALSE;
+Step3_GreenFlash   := FALSE;
+
+UnscramblerVFD1FWD := FALSE;
+UnscramblerVFD1REV := FALSE;
+
+
+(*rtTiltHoistOptical_3(CLK := OpticalSensor); // Rising edge each time the hoist sensor triggers
+
+tHoistIdle_3(IN := NOT rtTiltHoistOptical_3.Q, PT := T#1M);*)
+
+// ---------- Safety ----------
+IF NOT Permissive OR NOT LocalSafety_3 OR UnscramblerDelay.Q OR CycleStopPB THEN
+    Step3_State := 0;
+END_IF
+
+
+// ---------- sensor timing: stop if held > ----------
+tBoardDetect_3(IN := UnscramblerOpticalSensor, PT := T#3S);
+UnscramblerBoardDetected := tBoardDetect_3.Q;
+
+// ---------- sensor timing: stop if held > ----------
+tStopStep3(IN := Step1_YellowFlash, PT := T#30S);
+StopStep3 := tStopStep3.Q;
+
+
+// ----------------------------------------- Manual ---------------------------------------------------------
+
+IF NOT AutoMode THEN
+   
+    IF JOGUnscramblerVFD1FWD AND LocalSafety_3 AND Permissive THEN
+        UnscramblerVFD1FWD := TRUE;
+    ELSE
+        UnscramblerVFD1FWD := FALSE;
+    END_IF;
+	
+    IF JOGUnscramblerVFD1REV AND LocalSafety_3 AND Permissive THEN
+       UnscramblerVFD1REV := TRUE;
+	ELSE  
+		UnscramblerVFD1REV := FALSE; 
+    END_IF;
+
+ 
+ RETURN;   // skip auto sequence
+END_IF;
+
+
+
+
+
+
+//--------------------------------------------Auto Sequence-----------------------------------------------------------------
+CASE Step3_State OF
+// ---------------- IDLE ----------------
+    0:
+	
+UnscramblerVFD1FWD := FALSE;
+		
+IF Permissive AND LocalSafety_3 AND OpticalSensor THEN
+   Step3_State := 10; 
+END_IF
+
+
+
+
+// ---------------- RUNNING ----------------
+    10:
+
+UnscramblerVFD1FWD := TRUE;
+
+// board detected at grader set time → stop
+IF UnscramblerBoardDetected OR StopStep3 THEN
+   UnscramblerVFD1FWD := FALSE;
+   Step3_State := 20;  // stopped due to board
+END_IF
+   
+
+
+
+        
+// ---------------- STOPPED DUE TO BOARD or IDLE ------------------------------
+    20:
+        
+UnscramblerVFD1FWD  := FALSE;
+       
+IF NOT UnscramblerBoardDetected THEN
+	Step3_State := 10;
+END_IF
+        
+	
+
+END_CASE
+
+
+
+
+
+
+
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="Step_3_Unscrambler">
+      <LineId Id="15" Count="0" />
+      <LineId Id="345" Count="0" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="343" Count="0" />
+      <LineId Id="342" Count="0" />
+      <LineId Id="17" Count="9" />
+      <LineId Id="165" Count="0" />
+      <LineId Id="265" Count="0" />
+      <LineId Id="160" Count="0" />
+      <LineId Id="27" Count="0" />
+      <LineId Id="261" Count="1" />
+      <LineId Id="260" Count="0" />
+      <LineId Id="28" Count="3" />
+      <LineId Id="96" Count="1" />
+      <LineId Id="162" Count="1" />
+      <LineId Id="101" Count="0" />
+      <LineId Id="225" Count="0" />
+      <LineId Id="290" Count="1" />
+      <LineId Id="245" Count="0" />
+      <LineId Id="103" Count="0" />
+      <LineId Id="32" Count="1" />
+      <LineId Id="116" Count="0" />
+      <LineId Id="133" Count="6" />
+      <LineId Id="164" Count="0" />
+      <LineId Id="142" Count="1" />
+      <LineId Id="166" Count="1" />
+      <LineId Id="144" Count="3" />
+      <LineId Id="117" Count="1" />
+      <LineId Id="168" Count="1" />
+      <LineId Id="37" Count="0" />
+      <LineId Id="41" Count="0" />
+      <LineId Id="44" Count="4" />
+      <LineId Id="266" Count="0" />
+      <LineId Id="50" Count="0" />
+      <LineId Id="171" Count="0" />
+      <LineId Id="51" Count="1" />
+      <LineId Id="186" Count="0" />
+      <LineId Id="200" Count="1" />
+      <LineId Id="197" Count="0" />
+      <LineId Id="54" Count="3" />
+      <LineId Id="187" Count="0" />
+      <LineId Id="195" Count="0" />
+      <LineId Id="194" Count="0" />
+      <LineId Id="190" Count="2" />
+      <LineId Id="283" Count="0" />
+      <LineId Id="289" Count="0" />
+      <LineId Id="205" Count="1" />
+      <LineId Id="202" Count="0" />
+      <LineId Id="65" Count="3" />
+      <LineId Id="196" Count="0" />
+      <LineId Id="88" Count="1" />
+      <LineId Id="207" Count="2" />
+      <LineId Id="172" Count="0" />
+      <LineId Id="176" Count="1" />
+      <LineId Id="282" Count="0" />
+      <LineId Id="276" Count="5" />
+      <LineId Id="149" Count="0" />
+      <LineId Id="148" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,215 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="Step_2_StickMachine" Id="{b4dc1e3c-4140-4c36-bc6c-90124021e85e}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM Step_2_StickMachine // Stick Machine
+VAR
+	
+	// Internals 
+	JOGStickConveyorFWD : BOOL;     // set from HMI
+	JOGStickFeedChainFWD : BOOL;   // set from HMI
+	LocalSafety_2: BOOL;             //Safety Conditions
+	
+	
+	 // Edge detectors
+    rtStart : R_TRIG;      // Rising edge Cycle Start
+    rtStop  : R_TRIG;      // Rising edge Cycle Stop
+	
+	
+	
+	// Timers 
+    tHoistPause  : TON;         // Running time for Stick conveyor and feed chain after tilt hoist reaches bottom limit switch
+	
+	
+	
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// Safety
+LocalSafety_2 := StickConveyorMMP AND StickFeedChainMMP;
+
+
+
+// Defaults: make outputs known each scan
+Step2_RedFlash    := FALSE;
+Step2_RedSteady    := FALSE;
+Step2_YellowSteady := FALSE;
+Step2_YellowFlash := FALSE;
+Step2_GreenSteady  := FALSE;
+Step2_GreenFlash  := FALSE;
+StickConveyorFWD := FALSE;
+StickFeedChainFWD := FALSE;
+
+
+// Edge detect PBs and Optical falling edge
+rtStart(CLK := CycleStartPB);
+rtStop(CLK := CycleStopPB);
+
+
+// Stop button or lost permissive or lost local safety → go to IDLE immediately
+IF (rtStop.Q OR NOT Permissive OR NOT LocalSafety_2) THEN
+    Step2_State := 0;        // IDLE
+END_IF;
+
+
+
+
+// -------------------- Manual override (when AutoMode = FALSE) ------------------
+IF NOT AutoMode THEN
+    // Simple, safe manual jogs
+    IF JOGStickConveyorFWD  AND Permissive AND LocalSafety_2 THEN
+        StickConveyorFWD := TRUE;
+	ELSE
+		StickConveyorFWD := FALSE;
+    END_IF
+
+    IF JOGStickFeedChainFWD AND Permissive AND LocalSafety_2 THEN
+        StickFeedChainFWD := TRUE;
+	ELSE
+		StickFeedChainFWD := FALSE;
+    END_IF
+
+    // Tower lights in manual: Yellow
+    IF NOT AutoMode THEN
+        Step2_YellowSteady := TRUE;
+    END_IF
+
+    RETURN;    // skips Auto sequence when in manual
+END_IF
+
+
+
+    // ---------------------- Auto Sequence-------------------------------------
+
+CASE Step2_State OF
+
+    0:  // IDLE / READY
+        Step2_YellowSteady := TRUE;
+        StickConveyorFWD   := FALSE;
+        StickFeedChainFWD  := FALSE;
+
+        // If safe and not full, wait for Step 1 pause or start signal
+        IF (Permissive AND LocalSafety_2 AND NOT StickMachine_TopLimit) THEN
+            IF rtStart.Q THEN
+                Step2_State := 10;      // start feeding
+            END_IF
+        END_IF
+
+
+    // ---------------------------------------------------
+    10: // RUNNING / FEEDING
+     
+		Step2_RedFlash    := FALSE;
+		Step2_RedSteady    := FALSE;
+		Step2_YellowSteady := FALSE;
+		Step2_YellowFlash := FALSE;
+		Step2_GreenSteady  := TRUE;
+		Step2_GreenFlash  := FALSE;
+        StickConveyorFWD  := TRUE;
+        StickFeedChainFWD := TRUE;
+		
+		UnscramblerDelay(IN := UnscramblerBoardDetected, PT := T#30S);	
+		 tHoistPause(IN := Step1_YellowFlash OR UnscramblerDelay.IN, PT := T#30S); // Tilt hoist reaches bottom limit and timer start, stickmachine motors run for set time after tilt hoist reaches bottom
+		
+        // Stop when bin becomes full or Tilt Hoist is at bottom
+        IF StickMachine_TopLimit OR tHoistPause.Q (*OR Step2OffSignal*)THEN
+            StickConveyorFWD  := FALSE;
+            StickFeedChainFWD := FALSE;
+			StopStep3 := TRUE;
+            Step2_State := 20;          // go to FULL / FLASH
+        END_IF
+
+        // Lost safety or permissive → back to IDLE
+        IF (NOT Permissive) OR (NOT LocalSafety_2) THEN
+            StickConveyorFWD  := FALSE;
+            StickFeedChainFWD := FALSE;
+            Step2_State := 0;
+        END_IF
+
+
+    // ---------------------------------------------------
+    20: // FULL BIN / Yellow FLASH
+        Step2_RedFlash    := FALSE;
+		Step2_RedSteady    := FALSE;
+		Step2_YellowSteady := FALSE;
+		Step2_YellowFlash := TRUE;
+		Step2_GreenSteady  := FALSE;
+		Step2_GreenFlash  := FALSE;
+        StickConveyorFWD   := FALSE;
+        StickFeedChainFWD  := FALSE;
+		
+       
+        IF rtStart.Q AND NOT StickMachine_TopLimit AND Permissive AND LocalSafety_2 THEN
+			Step2_YellowFlash := FALSE;
+            Step2_State := 10;          // go to running
+        END_IF
+
+
+END_CASE
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="Step_2_StickMachine">
+      <LineId Id="3" Count="5" />
+      <LineId Id="190" Count="4" />
+      <LineId Id="12" Count="13" />
+      <LineId Id="33" Count="2" />
+      <LineId Id="37" Count="5" />
+      <LineId Id="242" Count="1" />
+      <LineId Id="43" Count="3" />
+      <LineId Id="244" Count="1" />
+      <LineId Id="47" Count="9" />
+      <LineId Id="59" Count="0" />
+      <LineId Id="218" Count="0" />
+      <LineId Id="60" Count="2" />
+      <LineId Id="64" Count="16" />
+      <LineId Id="201" Count="4" />
+      <LineId Id="200" Count="0" />
+      <LineId Id="81" Count="1" />
+      <LineId Id="186" Count="0" />
+      <LineId Id="214" Count="0" />
+      <LineId Id="83" Count="0" />
+      <LineId Id="215" Count="0" />
+      <LineId Id="84" Count="3" />
+      <LineId Id="220" Count="0" />
+      <LineId Id="88" Count="12" />
+      <LineId Id="206" Count="4" />
+      <LineId Id="104" Count="5" />
+      <LineId Id="217" Count="0" />
+      <LineId Id="110" Count="2" />
+      <LineId Id="132" Count="34" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

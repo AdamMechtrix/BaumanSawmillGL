@@ -1,0 +1,269 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="Step_7_Saw_Positioning" Id="{a65fa5f1-e818-47b1-ba2f-444b9555b8e9}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM Step_7_Saw_Positioning
+VAR
+	 i : INT;
+	NextTargetLength: INT :=0;
+	ActiveLength: INT;
+	
+	
+	ftCutDone: F_TRIG;
+	ftGradingEndLimit: F_TRIG;
+	rtSawFeedChainHomingSensor : R_TRIG;
+	rtGoToPosition : R_TRIG;
+	rtExecuteAbs1 : R_TRIG;
+	
+	
+	
+
+	
+	LocalSafety_7: BOOL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[//------------------Defaults--------------------
+
+SawFeedChainVFD3FWD := FALSE;
+
+
+// ---------- Safety ----------
+
+LocalSafety_7 := NOT VFD3Faulted AND SawBlade1MMP AND SawBlade2MMP AND DustCollectorMMP;
+
+
+
+IF NOT Permissive OR NOT LocalSafety_7 OR CycleStopPB THEN
+    Step7_State := 0;
+END_IF
+
+//------------------Triggers------------------------------
+ftCutDone(CLK := SawPhotoeye); 
+rtGoToPosition(CLK := HMI_GoToPosition);
+rtExecuteAbs1(CLK := xExecuteDistanceAbs1);
+
+
+lrActualPosition := GVL_Axes.Axis1.NcToPlc.ActPos;
+
+
+
+IF ftCutDone.Q THEN
+    FOR i := 1 TO 4 DO
+        FootFIFO[i] := FootFIFO[i + 1];
+    END_FOR;
+    FootFIFO[5] := 0;
+END_IF;
+
+
+
+
+//----------------------------------------Board Transfer---------------------------------
+
+
+// ---------- Trigger to enter POSITIONING (state 0) ----------
+IF ftCutDone.Q OR rtGoToPosition.Q THEN // falling edge on SawPhotoeye or HMI button "go to position" 
+    Step7_State := 5;
+END_IF
+
+
+
+
+
+
+// ---------- State machine ----------
+CASE Step7_State OF
+	
+0: // standby
+
+
+SawFeedChainVFD3FWD := FALSE;
+SawBladesFWD := FALSE;
+DustCollectorFWD := FALSE;
+
+
+IF CycleStartPB THEN
+	Step7_State := 5;
+END_IF
+
+
+
+
+
+5:  // POSITIONING DECISION
+
+SawBladesFWD := TRUE;
+DustCollectorFWD := TRUE;
+
+lrTargetPosition := FootFIFO[1]; // target position from queue
+
+// If there’s no target length, do nothing
+IF FootFIFO[1] = 0 THEN
+    SawFeedChainVFD3FWD := FALSE;	
+ELSE                  
+	// Otherwise, continue with positioning logic
+	// call FB every scan (Execute FALSE by default here)
+        fbMove_Absolute1(
+            Axis         := GVL_Axes.Axis1,
+            Execute      := FALSE,
+            Position     := lrTargetPosition,
+            Velocity     := 3500.0,
+            Acceleration := ,
+            Deceleration := ,
+            Jerk         := ,
+            BufferMode   := MC_BufferMode.MC_Aborting,
+            Options      := ,
+	);
+
+	// 1) Check if already at position
+	IF ABS(lrActualPosition - lrTargetPosition) <= PositionTolerance (*LREAL := 0.05; // acceptable error window*) THEN
+	// already in position, skip move
+     Step7_State := 10; // back to feeding
+	ELSE
+	// 2) Execute a move if not yet in position
+    Step7_State := 15; // Execute absolute trget position
+	END_IF;
+								
+END_IF
+
+10: //busy //running// FEEDING 
+
+
+xExecuteDistanceAbs1:= FALSE;  
+
+
+// still call FB to keep status fresh
+        fbMove_Absolute1(
+            Axis         := GVL_Axes.Axis1,
+            Execute      := FALSE,
+            Position     := lrTargetPosition,
+            Velocity     := 3500.0,
+            Acceleration := ,
+            Deceleration := ,
+            Jerk         := ,
+            BufferMode   := MC_BufferMode.MC_Aborting,
+            Options      := ,
+);
+
+
+SawFeedChainVFD3FWD := TRUE;
+ 
+  // The edges at top will kick us back to state 0
+  // when SawPhotoeye falls or HMI_GoToPos is pressed.
+ 
+
+ 
+ 15: //ISSUE MOVE (one-scan pulse), then wait for done
+
+ 
+SawFeedChainVFD3FWD := FALSE;     
+xExecuteDistanceAbs1:= TRUE;   // pulse Execute
+           
+       
+
+// Call the motion block
+fbMove_Absolute1(
+	Axis         := GVL_Axes.Axis1,
+	Execute      := rtExecuteAbs1.Q,
+	Position     := lrTargetPosition,
+	Velocity     := 3500.0,
+	Acceleration := ,
+	Deceleration := ,
+	Jerk         := ,
+	BufferMode   := MC_BufferMode.MC_Aborting,
+	Options      := ,
+);
+
+// When the move is finished...
+IF xMoveAbsDone1 THEN
+   Step7_State  := 10;  
+END_IF;
+
+
+       
+
+END_CASE
+
+
+
+
+
+
+
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="Step_7_Saw_Positioning">
+      <LineId Id="8" Count="0" />
+      <LineId Id="321" Count="1" />
+      <LineId Id="349" Count="2" />
+      <LineId Id="355" Count="4" />
+      <LineId Id="352" Count="1" />
+      <LineId Id="324" Count="1" />
+      <LineId Id="9" Count="1" />
+      <LineId Id="14" Count="1" />
+      <LineId Id="224" Count="4" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="42" Count="4" />
+      <LineId Id="36" Count="3" />
+      <LineId Id="48" Count="3" />
+      <LineId Id="115" Count="2" />
+      <LineId Id="52" Count="1" />
+      <LineId Id="55" Count="0" />
+      <LineId Id="65" Count="3" />
+      <LineId Id="119" Count="1" />
+      <LineId Id="162" Count="0" />
+      <LineId Id="121" Count="0" />
+      <LineId Id="337" Count="3" />
+      <LineId Id="363" Count="1" />
+      <LineId Id="343" Count="1" />
+      <LineId Id="360" Count="1" />
+      <LineId Id="345" Count="3" />
+      <LineId Id="336" Count="0" />
+      <LineId Id="122" Count="0" />
+      <LineId Id="365" Count="1" />
+      <LineId Id="326" Count="2" />
+      <LineId Id="255" Count="0" />
+      <LineId Id="315" Count="2" />
+      <LineId Id="329" Count="0" />
+      <LineId Id="305" Count="0" />
+      <LineId Id="264" Count="11" />
+      <LineId Id="123" Count="0" />
+      <LineId Id="208" Count="2" />
+      <LineId Id="212" Count="0" />
+      <LineId Id="221" Count="0" />
+      <LineId Id="214" Count="0" />
+      <LineId Id="216" Count="0" />
+      <LineId Id="222" Count="1" />
+      <LineId Id="202" Count="2" />
+      <LineId Id="307" Count="1" />
+      <LineId Id="205" Count="0" />
+      <LineId Id="310" Count="0" />
+      <LineId Id="309" Count="0" />
+      <LineId Id="280" Count="8" />
+      <LineId Id="313" Count="0" />
+      <LineId Id="312" Count="0" />
+      <LineId Id="278" Count="1" />
+      <LineId Id="206" Count="0" />
+      <LineId Id="173" Count="0" />
+      <LineId Id="230" Count="1" />
+      <LineId Id="236" Count="0" />
+      <LineId Id="232" Count="0" />
+      <LineId Id="234" Count="0" />
+      <LineId Id="233" Count="0" />
+      <LineId Id="235" Count="0" />
+      <LineId Id="124" Count="0" />
+      <LineId Id="293" Count="0" />
+      <LineId Id="129" Count="2" />
+      <LineId Id="133" Count="0" />
+      <LineId Id="135" Count="9" />
+      <LineId Id="314" Count="0" />
+      <LineId Id="146" Count="4" />
+      <LineId Id="152" Count="2" />
+      <LineId Id="158" Count="1" />
+      <LineId Id="161" Count="0" />
+      <LineId Id="69" Count="7" />
+      <LineId Id="40" Count="0" />
+      <LineId Id="31" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

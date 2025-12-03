@@ -1,0 +1,299 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <GVL Name="Global_Variables" Id="{b914ad78-915b-4204-8ba5-9c2888b6ba45}">
+    <Declaration><![CDATA[VAR_GLOBAL 
+//--------------------------------- Power_Panel_IO---------------------------------
+
+
+	//INPUTS for EL1409 (16 inputs avilable)
+	SawPhotoeye AT %I*:BOOL;
+	OutfeedRopePull AT %I*:BOOL;
+	//Manual Motor Protector Signals//
+	TiltHoistMMP AT %I*:BOOL;
+	StickConveyorMMP AT %I*:BOOL; 
+	StickFeedChainMMP AT %I*:BOOL; 
+	EvenEnderMMP AT %I*:BOOL; 
+	ScrapConveyorMMP AT %I*:BOOL; 
+	OutFeedConveyorMMP AT %I*:BOOL;
+	DustCollectorMMP AT %I*:BOOL;
+	SawBlade1MMP AT %I*:BOOL;
+	SawBlade2MMP AT %I*:BOOL;
+	//Safety Singal
+	SafetyCircuitSignal AT %I*:BOOL;
+	
+		//Servo
+		OverTRavelLimitREV AT %I*:BOOL; 
+		OverTRavelLimitFWD AT %I*:BOOL;
+		HomingSensor AT %I*:BOOL;
+	
+
+	//INPUTS for EL1859 (8 inputs avilable)
+	VFD1Faulted AT %I*:BOOL; //Unscrambler Chain
+	VFD2Faulted AT %I*:BOOL; //Grading Chain 
+	VFD3Faulted AT %I*:BOOL; //Feed Chain - Saw
+	GradingEndLimit AT %I*:BOOL; // Grading end limit switch
+	SawFeedChainHomingSensor AT %I*:BOOL; // saw feed chain homing sensor	
+	
+	//OUTPUTS for EL2409 (16 outputs avilable)
+	ResetVFDs AT %Q*:BOOL;
+	UnscramblerVFD1FWD AT %Q*:BOOL; //Unscrambler Chain FWD
+	UnscramblerVFD1REV AT %Q*:BOOL; //Unscrambler Chain REV
+	GradingVFD2FWD AT %Q*:BOOL; //Grading Chain 
+	SawFeedChainVFD3FWD AT %Q*:BOOL; //Feed Chain - Saw
+	
+	TiltHoistFWD AT %Q*:BOOL;
+	TiltHoistREV AT %Q*:BOOL;
+	StickConveyorFWD AT %Q*:BOOL;
+	StickFeedChainFWD AT %Q*:BOOL;
+	EvenEnderFWD AT %Q*:BOOL;
+	ScrapConveyorFWD AT %Q*:BOOL;
+	OutFeedConveyorFWD AT %Q*:BOOL;
+	DustCollectorFWD AT %Q*:BOOL;
+	SawBladesFWD AT %Q*:BOOL;
+	
+	//OUTPUTS for EL1859 (8 outputs available)
+	GradingVFD2REV AT %Q*:BOOL; //Grading Chain REV
+	SawFeedChainVFD3REV AT %Q*:BOOL; //Feed Chain - Saw
+	
+	
+	
+//---------------------------------Control_Panel_IO----------------------------------
+
+	
+	//INPUTS for EL1409
+	
+	PBFoot:ARRAY[4..16] OF BOOL;
+	
+	ConfirmPB AT %I*:BOOL; //Confirms Board Input
+	CancelPB AT %I*:BOOL; //Cancels Last Board Input
+	//PanelStopPB AT %I*:BOOL; //CycleStopPB same input 
+	
+	//OUTPUTS for EL2409
+
+	
+	LTFoot:ARRAY[4..16]OF BOOL;
+
+	
+	//ANALOG INPUTS for EL3255
+	AI_POT:INT;     // changed on the HMI screen
+	
+	//ANALOG OUTPUTS for EL4004
+	UnscramblerVFD1speed:INT; //Unscrambler Chain
+	GradingVFD2speed:INT; //Grading Chain 
+	SawFeedVFD3speed:INT; //Feed Chain - Saw
+		
+	
+	
+	
+	
+//---------------------------------EtherCAT_Box_IO---------------------------------
+
+	//INPUTS for EPP2339-0021
+	TopLimitSwitch AT %I*:BOOL; //Tilt Hoist
+	BottomLimitSwitch AT %I*:BOOL; //Tilt Hoist
+	CycleStartPB AT %I*:BOOL; //Box for Tower Light
+	CycleStopPB AT %I*:BOOL; //Box for Tower Light
+	OpticalSensor AT %I*:BOOL; //Detects Board falling off Tilt Hoist
+	StickMachine_TopLimit AT %I*:BOOL; //Top Limit Indicator for Stick Machine
+	UnscramblerOpticalSensor AT %I*:BOOL; //Detects board at the bottom of Unscrambler/start of grading Line
+	GradingRopePull AT %I*:BOOL; // Start/Stop Grading Chain Line 
+	
+	
+	
+	//OUTPUTS for EPP2339-0021
+	RedLight AT %Q*:BOOL;
+	YellowLight AT %Q*:BOOL;
+	GreenLight AT %Q*:BOOL;
+	StickMachine_Motor AT %Q*:BOOL; // Start/Stop motor for stick receiving machine, it wraps the sticks up on a sling or something
+	
+	
+	
+	
+	
+	
+	//-------------------------------------------------INTERNALS----------------------------------------------------------------------------------------------------------
+	
+	
+	//---------------------------------Tower Light Manager---------------------------------
+	
+	// Requests from steps (set in Step_1, Step_2, etc.)
+    Step1_RedFlash  : BOOL;
+    Step1_RedSteady : BOOL;
+    Step2_RedFlash  : BOOL;
+    Step2_RedSteady : BOOL;
+	Step3_RedFlash  : BOOL;
+    Step3_RedSteady : BOOL;
+	Step5_RedFlash  : BOOL;
+    Step5_RedSteady : BOOL;
+	Step6_RedFlash  : BOOL;
+    Step6_RedSteady : BOOL;
+	Step7_RedFlash  : BOOL;
+    Step7_RedSteady : BOOL;
+	
+	
+    Step1_YellowSteady : BOOL;
+	Step1_YellowFlash  : BOOL;
+    Step2_YellowSteady : BOOL;
+	Step2_YellowFlash  : BOOL;
+	Step3_YellowSteady : BOOL;
+	Step3_YellowFlash  : BOOL;
+	Step5_YellowSteady : BOOL;
+	Step5_YellowFlash  : BOOL;
+	Step6_YellowSteady : BOOL;
+	Step6_YellowFlash  : BOOL;
+	Step7_YellowSteady : BOOL;
+	Step7_YellowFlash  : BOOL;
+
+ 	Step1_GreenSteady : BOOL;
+	Step1_GreenFlash  : BOOL;
+    Step2_GreenSteady : BOOL;
+	Step2_GreenFlash  : BOOL;
+	Step3_GreenSteady : BOOL;
+	Step3_GreenFlash  : BOOL;
+	Step5_GreenSteady : BOOL;
+	Step5_GreenFlash  : BOOL;
+	Step6_GreenSteady : BOOL;
+	Step6_GreenFlash  : BOOL;
+	Step7_GreenSteady : BOOL;
+	Step7_GreenFlash  : BOOL;	
+	
+	
+	
+	
+	//--------------------------Auto/Manual Mode-------------------------------
+
+	
+	AutoMode : BOOL;	
+	
+	
+	//--------------------------Permissives-------------------------------------
+	
+	
+	Permissive : BOOL;
+	
+	
+	//---------------------------States---------------------------------------
+	
+	GlobalState : INT :=0; 
+	Step1_State : INT :=0;
+	Step2_State : INT :=0;
+	Step3_State : INT :=0;
+	Step4_State : INT :=0;
+	Step5_State : INT :=0;
+	Step6_State : INT :=0;
+	Step7_State : INT :=0;
+	Step8_State : INT :=0;
+	
+	//---------------------------------Unscrambler------------------------------
+	
+	
+	UnscramblerBoardDetected : BOOL;
+	
+	
+
+	//------------------------------Timers------------------------------------
+	
+	
+	
+	UnscramblerDelay : TON;
+	
+	
+	
+	//--------------------------------misc----------------------------------
+	
+	
+	Step2OffSignal : BOOL;
+	StopStep3: BOOL;
+	
+	//--------------------------------Faults & Displays----------------------------------------
+	
+	
+	Fault : ARRAY[1..10] OF BOOL;             // Faults and Displays are described in Main POU
+	FaultDisplay : ARRAY[1..10] OF STRING[100];
+	
+	
+	
+	
+	
+	//-----------------------------------------Log Sequence------------------------------------
+
+	ConfirmedFoot  : INT := 0;   // Confirmed length	
+	FootFIFO : ARRAY[1..5] OF INT := [0, 0, 0, 0, 0];
+	
+	
+	
+	
+	
+	//---------------------------------Servo------------------------
+	
+	ServoInPosition : BOOL;
+	HMI_GoToPosition : BOOL;
+	
+	
+	
+	
+	//------------------------------Motion---------------------------------------------------
+	//MC_Power
+	fbMC_Power1: MC_Power;
+	xEnable: BOOL;
+	xControlPower: BOOL; //simulate control power
+	fbMC_Power2: MC_Power;
+	lrAxis2_Override: LREAL;
+	
+	//MC_Reset
+	fbMC_Reset1: MC_Reset;
+	xAxisReset: BOOL;
+	fbMC_Reset2: MC_Reset;
+	xMachineReset: BOOL;
+	
+	//Move_Relative
+	fbMC_MoveRelative1: MC_MoveRelative;
+	xExecuteDistanceRel: BOOL;
+	lrDistance: LREAL := 10.0;
+	
+	//Move_Absolute
+	fbMove_Absolute1: MC_MoveAbsolute;
+	xExecuteDistanceAbs1: BOOL;
+	lrTargetPosition: LREAL; //target posiiton
+	fbMC_MoveVelocity1: MC_MoveVelocity;
+	
+	//Move_Velocity
+	xExecuteMoveVelocity1: BOOL;
+	
+	//MC_Stop
+	fbMC_Stop1: MC_Stop;
+	xExecuteStop1: BOOL;
+	
+	//MC_Halt
+	fbMC_Halt: MC_Halt;
+	xExecuteHalt1: BOOL;
+	fbMC_MoveJog1: MC_Jog;
+	
+	//MC_Home
+	fbMC_Home1: MC_Home;
+	xExecuteHome1: BOOL;
+	xJogForward: BOOL;
+	xJogBackwards: BOOL;
+	
+	
+	//Other
+	xMoveAbsDone1: BOOL;
+	xMoveAbsBusy1: BOOL;
+	lrActualPosition: LREAL;
+	PositionTolerance       : LREAL := 0.05; // acceptable error window
+	
+	
+END_VAR
+
+
+
+
+
+
+
+
+
+
+]]></Declaration>
+  </GVL>
+</TcPlcObject>

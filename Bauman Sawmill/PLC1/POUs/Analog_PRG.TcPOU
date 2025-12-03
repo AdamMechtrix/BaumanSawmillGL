@@ -1,0 +1,118 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="Analog_PRG" Id="{52760586-22c0-4906-a346-d41bff646391}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM Analog_PRG
+VAR
+	
+
+AI_Input : INT;
+AO_Output : INT;
+AO_Unscrambler : INT;
+AO_Grading : INT;
+AO_SawFeedChain: INT;
+
+// --- Analog routing logic ---
+// Selection = 1..3 (from HMI dropdown)
+Selection : ARRAY[1..3] OF BOOL;  // 1=Unscrambler, 2=Grading, 3=SawFeed
+
+
+
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[//---------------------------Defaults-----------------------------
+AO_Unscrambler := 0;
+AO_Grading := 0;
+AO_SawFeedChain := 0;
+
+
+
+AI_INT := AI_Input;
+
+UnscramblerVFD1speed := AO_Unscrambler;
+GradingVFD2speed := AO_Grading;
+SawFeedVFD3speed := AO_SawFeedChain;
+
+
+
+
+
+
+
+CASE Selection OF
+//Selection 1 - Unscrambler	
+1:  
+
+AO_Unscrambler := AI_Input;
+AO_Grading := 0;
+AO_SawFeedChain := 0;
+
+// Selection 2 - Grading
+2:  
+
+AO_Grading := AI_Input;
+AO_Unscrambler := 0;
+AO_SawFeedChain := 0;
+
+
+// Selection 3 - Saw FeedChain
+3:  
+
+AO_SawFeedChain := AI_Input;
+AO_Unscrambler := 0;
+AO_Grading := 0;
+
+// --- Default (nothing selected) ---
+ELSE
+    AO_Unscrambler := 0;
+    AO_Grading := 0;
+    AO_SawFeedChain := 0;
+
+END_CASE
+
+
+
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="Analog_PRG">
+      <LineId Id="16" Count="1" />
+      <LineId Id="68" Count="2" />
+      <LineId Id="18" Count="0" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="6" Count="0" />
+      <LineId Id="37" Count="0" />
+      <LineId Id="65" Count="0" />
+      <LineId Id="59" Count="0" />
+      <LineId Id="38" Count="1" />
+      <LineId Id="41" Count="1" />
+      <LineId Id="64" Count="0" />
+      <LineId Id="48" Count="3" />
+      <LineId Id="72" Count="0" />
+      <LineId Id="83" Count="0" />
+      <LineId Id="114" Count="2" />
+      <LineId Id="105" Count="0" />
+      <LineId Id="113" Count="0" />
+      <LineId Id="85" Count="0" />
+      <LineId Id="84" Count="0" />
+      <LineId Id="101" Count="0" />
+      <LineId Id="108" Count="0" />
+      <LineId Id="123" Count="0" />
+      <LineId Id="117" Count="1" />
+      <LineId Id="112" Count="0" />
+      <LineId Id="86" Count="0" />
+      <LineId Id="74" Count="0" />
+      <LineId Id="103" Count="0" />
+      <LineId Id="80" Count="0" />
+      <LineId Id="87" Count="1" />
+      <LineId Id="122" Count="0" />
+      <LineId Id="126" Count="3" />
+      <LineId Id="89" Count="0" />
+      <LineId Id="81" Count="0" />
+      <LineId Id="73" Count="0" />
+      <LineId Id="52" Count="2" />
+      <LineId Id="46" Count="0" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

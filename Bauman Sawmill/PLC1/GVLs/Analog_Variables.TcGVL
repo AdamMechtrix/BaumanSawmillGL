@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <GVL Name="Analog_Variables" Id="{923b765f-bdde-427f-af35-b13e39fe856d}">
+    <Declaration><![CDATA[VAR_GLOBAL
+	
+
+	AI_INT  : INT;   // from EL3255, 0.0–10.0 V
+    AO_INT : INT;   // to EL4004, 0.0–10.0 V
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

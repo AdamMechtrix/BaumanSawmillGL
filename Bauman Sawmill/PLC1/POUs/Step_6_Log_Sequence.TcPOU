@@ -1,0 +1,119 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="Step_6_Log_Sequence" Id="{3303b1f5-236e-4467-934a-57e2043a7a2d}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM Step_6_Log_Sequence
+VAR
+	j, i: INT;
+	
+	SelectedFoot   : INT := 0;   // 0 = none, otherwise 4..16
+    //GVL ---------ConfirmedFoot  : INT := 0;   // Confirmed length
+    rtConfirm      : R_TRIG;     // for one-shot on ConfirmPB
+	rtCancel : R_TRIG;   // edge detector for Cancel
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[
+
+
+
+// One-shot on Confirm button
+rtConfirm(CLK := ConfirmPB);
+// One-shot on Cancel button
+rtCancel(CLK := CancelPB);
+
+
+
+
+
+
+
+// If a PB is pressed, set that light ON and others OFF
+FOR j := 4 TO 16 DO
+    IF PBFoot[j] THEN
+        // turn all lights off first
+        FOR i := 4 TO 16 DO
+            LTFoot[i] := FALSE;
+        END_FOR;
+		
+        // turn only this one ON
+        LTFoot[j] := TRUE;
+		
+		// remember which length is selected
+        SelectedFoot := j;   // j will be 4..16
+    END_IF;
+END_FOR;
+
+//-------------------------------------------------------------------------------------
+
+// One-shot on Confirm button
+IF rtConfirm.Q THEN
+    // Save the current selected length
+    ConfirmedFoot := SelectedFoot;
+
+    // Add it into the FIFO (first empty slot)
+    FOR i := 1 TO 5 DO
+        IF FootFIFO[i] = 0 THEN
+            FootFIFO[i] := ConfirmedFoot;   // store new graded length
+            EXIT;                           // stop after writing one slot
+        END_IF;
+    END_FOR;
+
+    // 3) Clear the lights and selection ready for next board
+    FOR j := 4 TO 16 DO
+        LTFoot[j] := FALSE;
+    END_FOR;
+
+    SelectedFoot := 0;
+END_IF;
+	
+//-----------------------------------------------------------------------------------
+// One-shot on Cancel button
+IF rtCancel.Q THEN
+    // Remove the newest board entered by the grader.
+    //  start from the back (slot 5) and clear the first non-zero we find.
+    FOR i := 5 TO 1 BY -1 DO
+        IF FootFIFO[i] <> 0 THEN // <> "Not equal to"
+            FootFIFO[i] := 0;          // clear that newest entry
+            EXIT;                      // stop after clearing one
+        END_IF;
+    END_FOR;
+END_IF;
+
+
+
+
+
+
+
+
+
+
+
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="Step_6_Log_Sequence">
+      <LineId Id="6" Count="3" />
+      <LineId Id="86" Count="0" />
+      <LineId Id="59" Count="2" />
+      <LineId Id="87" Count="4" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="68" Count="7" />
+      <LineId Id="107" Count="0" />
+      <LineId Id="76" Count="1" />
+      <LineId Id="83" Count="2" />
+      <LineId Id="78" Count="0" />
+      <LineId Id="38" Count="2" />
+      <LineId Id="92" Count="0" />
+      <LineId Id="167" Count="18" />
+      <LineId Id="115" Count="0" />
+      <LineId Id="106" Count="0" />
+      <LineId Id="128" Count="0" />
+      <LineId Id="186" Count="9" />
+      <LineId Id="139" Count="10" />
+      <LineId Id="138" Count="0" />
+      <LineId Id="43" Count="0" />
+      <LineId Id="30" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

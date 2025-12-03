@@ -1,0 +1,162 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="MAIN" Id="{7d9a2510-15fb-43ca-a644-45fc1a539370}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM MAIN
+VAR
+	// --------------------------Tower Light Manager-----------------------
+	Any_RedFlash  : BOOL;
+    Any_RedSteady : BOOL;
+    Any_YellowSteady : BOOL;
+	 Any_YellowFlash : BOOL;
+    Any_GreenSteady  : BOOL;
+	Any_GreenFlash  : BOOL;
+	Main_RedFlash : BOOL;
+	
+
+    TL : Tower_Light_Manager;
+	
+	rtBoardStuckatUnscrambler: BOOL;
+	
+	i : INT;
+	
+	 SafetyFallingEdgeDetect   : F_TRIG; // detects high→low transition
+
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[
+//-------------------------------------Defaults--------------------------------
+
+
+ //--------------------------Tower Light Manager-----------------------
+
+Any_RedFlash  := Step1_RedFlash  OR Step2_RedFlash  OR Step3_RedFlash OR Step5_RedFlash OR Step6_RedFlash OR Step7_RedFlash OR Main_RedFlash;
+Any_RedSteady := Step1_RedSteady OR Step2_RedSteady OR Step3_RedSteady OR Step5_RedSteady OR Step6_RedSteady OR Step7_RedSteady;
+Any_YellowSteady := Step1_YellowSteady OR Step2_YellowSteady OR Step3_YellowSteady OR Step5_YellowSteady OR Step6_YellowSteady OR Step7_YellowSteady;
+Any_YellowFlash := Step1_YellowFlash OR Step2_YellowFlash OR Step3_YellowFlash OR Step5_YellowFlash OR Step6_YellowFlash OR Step7_YellowFlash;
+Any_GreenSteady := Step1_GreenSteady OR Step2_GreenSteady OR Step3_GreenSteady OR Step5_GreenSteady OR Step6_GreenSteady OR Step7_GreenSteady;
+Any_GreenFlash := Step1_GreenFlash OR Step2_GreenFlash OR Step3_GreenFlash OR Step5_GreenFlash OR Step6_GreenFlash OR Step7_GreenFlash;
+
+
+// Call manager once per scan
+TL(
+    RedFlash    := Any_RedFlash,
+    RedSteady   := Any_RedSteady,
+    YellowSteady  := Any_YellowSteady,
+	YellowFlash  := Any_YellowFlash,
+    GreenSteady  := Any_GreenSteady,
+	GreenFlash  := Any_GreenFlash,
+    BlinkPeriod := T#500MS,
+    RedOut      => RedLight,        //RedLight/YellowLight/GreenLight
+    YellowOut   => YellowLight,     // to the real %Q outputs
+    GreenOut    => GreenLight
+);
+
+
+
+
+//--------------------------------Permissive-----------------------------------
+
+
+Permissive := SafetyCircuitSignal;
+
+IF NOT Permissive THEN
+	Main_RedFlash := TRUE;
+ELSE
+	Main_RedFlash := FALSE;
+END_IF
+
+
+
+
+
+rtBoardStuckatUnscrambler :=  UnscramblerDelay.Q;
+
+
+
+//--------------------------------Faults & Displays--------------------------------------
+Fault[1] := StickMachine_TopLimit;  // Stick machine bin full
+Fault[2] := Main_RedFlash;   //Safety Circuit Open
+(*Fault[3] := 
+Fault[4] := 
+Fault[5] := 
+Fault[6] := 
+Fault[7] := 
+Fault[8] := 
+Fault[9] := 
+Fault[10] := *)
+
+
+IF Fault[1] THEN
+	FaultDisplay[1] :='StickMachine Full';
+ELSE
+	FaultDisplay[1] :='';	
+END_IF
+
+IF Fault[2] THEN
+	FaultDisplay[2] :='Safety Circuit Open';
+ELSE
+	FaultDisplay[2] :='';	
+END_IF
+
+
+
+
+//------------------------------Fault Reset--------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="MAIN">
+      <LineId Id="333" Count="0" />
+      <LineId Id="3" Count="0" />
+      <LineId Id="123" Count="0" />
+      <LineId Id="4" Count="5" />
+      <LineId Id="43" Count="0" />
+      <LineId Id="10" Count="0" />
+      <LineId Id="44" Count="0" />
+      <LineId Id="11" Count="6" />
+      <LineId Id="47" Count="0" />
+      <LineId Id="18" Count="0" />
+      <LineId Id="48" Count="0" />
+      <LineId Id="19" Count="12" />
+      <LineId Id="62" Count="1" />
+      <LineId Id="67" Count="0" />
+      <LineId Id="126" Count="1" />
+      <LineId Id="68" Count="0" />
+      <LineId Id="64" Count="1" />
+      <LineId Id="356" Count="1" />
+      <LineId Id="355" Count="0" />
+      <LineId Id="2" Count="0" />
+      <LineId Id="70" Count="3" />
+      <LineId Id="79" Count="0" />
+      <LineId Id="81" Count="8" />
+      <LineId Id="74" Count="1" />
+      <LineId Id="91" Count="0" />
+      <LineId Id="109" Count="0" />
+      <LineId Id="111" Count="1" />
+      <LineId Id="110" Count="0" />
+      <LineId Id="92" Count="0" />
+      <LineId Id="128" Count="3" />
+      <LineId Id="93" Count="5" />
+      <LineId Id="133" Count="0" />
+      <LineId Id="132" Count="0" />
+      <LineId Id="99" Count="9" />
+      <LineId Id="76" Count="2" />
+      <LineId Id="69" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

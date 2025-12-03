@@ -1,0 +1,182 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="Step_5_Grading" Id="{c380b0e7-991b-4137-87b9-01a5f8095264}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM Step_5_Grading //Grading Line
+VAR
+//--------------------Internals--------------------
+	LocalSafety_5  : BOOL;
+	
+	
+	
+	
+//----------------------Manual Mode---------------------------	
+ 		JOGGradingVFD2FWD : BOOL; //HMI
+		JOGGradingVFD2REV : BOOL;	
+	
+	
+	
+// Edge detectors
+    rtPullRope_5 : R_TRIG;      // Rising edge Pull Rope	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[//----------------------Safety--------------------
+
+LocalSafety_5  := NOT VFD2Faulted;
+
+
+//---------------------Defaults-------------------
+
+Step5_RedFlash    := FALSE;
+Step5_RedSteady    := FALSE;
+Step5_YellowSteady := FALSE;
+Step5_YellowFlash := FALSE;
+Step5_GreenSteady  := FALSE;
+Step5_GreenFlash  := FALSE;
+GradingVFD2FWD := FALSE;
+GradingVFD2REV := FALSE;
+
+rtPullRope_5(CLK := GradingRopePull);
+
+
+// Stop button or lost permissive or lost local safety → go to IDLE immediately
+IF CycleStopPB OR NOT Permissive OR NOT LocalSafety_5 THEN
+    Step5_State := 0; // IDLE
+END_IF	
+
+
+
+// ----------------------------------- Manual override (when AutoMode = FALSE) ---------------------------------------
+IF NOT AutoMode THEN
+    GradingVFD2FWD := FALSE;
+    GradingVFD2REV := FALSE;
+
+    IF Permissive AND LocalSafety_5 THEN
+        // Only run FWD if REV jog is NOT pressed
+        IF JOGGradingVFD2FWD AND NOT JOGGradingVFD2REV THEN
+            GradingVFD2FWD := TRUE;
+        END_IF
+
+        // Only run REV if FWD jog is NOT pressed
+        IF JOGGradingVFD2REV AND NOT JOGGradingVFD2FWD THEN
+            GradingVFD2REV := TRUE;
+        END_IF
+    END_IF;
+
+    RETURN;
+END_IF
+
+
+
+//--------------------------AutoMode---------------------------------------------------------------------------
+CASE Step5_State OF
+
+0: // Stopped  
+
+
+GradingVFD2FWD := FALSE;
+GradingVFD2REV := FALSE;
+
+IF CycleStartPB OR rtPullRope_5.Q THEN
+    Step5_State := 5; // IDLE
+END_IF	
+
+
+5: // Running/Standby
+   
+
+IF NOT GradingEndLimit THEN
+   GradingVFD2FWD := TRUE;   // start running
+ELSE
+	GradingVFD2FWD := FALSE;
+END_IF;
+
+
+IF rtPullRope_5.Q THEN
+	Step5_State := 0;
+
+END_IF
+
+
+
+
+
+END_CASE;
+
+
+
+
+
+
+
+
+
+
+
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="Step_5_Grading">
+      <LineId Id="54" Count="0" />
+      <LineId Id="80" Count="0" />
+      <LineId Id="77" Count="0" />
+      <LineId Id="79" Count="0" />
+      <LineId Id="78" Count="0" />
+      <LineId Id="76" Count="0" />
+      <LineId Id="55" Count="0" />
+      <LineId Id="119" Count="6" />
+      <LineId Id="56" Count="0" />
+      <LineId Id="279" Count="0" />
+      <LineId Id="260" Count="0" />
+      <LineId Id="62" Count="1" />
+      <LineId Id="199" Count="2" />
+      <LineId Id="64" Count="1" />
+      <LineId Id="74" Count="1" />
+      <LineId Id="41" Count="0" />
+      <LineId Id="375" Count="16" />
+      <LineId Id="117" Count="0" />
+      <LineId Id="130" Count="3" />
+      <LineId Id="332" Count="0" />
+      <LineId Id="285" Count="1" />
+      <LineId Id="336" Count="2" />
+      <LineId Id="341" Count="0" />
+      <LineId Id="343" Count="2" />
+      <LineId Id="342" Count="0" />
+      <LineId Id="339" Count="1" />
+      <LineId Id="335" Count="0" />
+      <LineId Id="287" Count="0" />
+      <LineId Id="289" Count="2" />
+      <LineId Id="347" Count="1" />
+      <LineId Id="292" Count="0" />
+      <LineId Id="350" Count="1" />
+      <LineId Id="357" Count="0" />
+      <LineId Id="371" Count="0" />
+      <LineId Id="373" Count="0" />
+      <LineId Id="352" Count="4" />
+      <LineId Id="349" Count="0" />
+      <LineId Id="293" Count="0" />
+      <LineId Id="154" Count="11" />
+      <LineId Id="118" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

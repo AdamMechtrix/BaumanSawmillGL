@@ -1,0 +1,97 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="Step_4_EvenEnder" Id="{0f8a0a75-c443-43fb-aa86-c1b5168b3cdf}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM Step_4_EvenEnder // Even Ender
+VAR
+	//-----------------Safety------------------
+	LocalSafety_4 : BOOL;
+	
+
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// ---------- local safety ----------
+LocalSafety_4 := EvenEnderMMP;
+
+// ---------- defaults ----------
+
+EvenEnderFWD := FALSE;
+
+
+// ---------- Safety ----------
+IF NOT Permissive OR NOT LocalSafety_4 THEN   // if anything unsafe, force the system to IDLE (state 0).
+    Step4_State := 0;
+END_IF
+
+
+
+// -------------------------------Main sequence ---------------------------------
+CASE Step4_State OF
+// ---------------- IDLE/STOPPED ----------------
+0: 
+	
+	EvenEnderFWD := FALSE;
+	   
+IF GradingVFD2FWD THEN         // Transition to RUN when the upstream grading conveyor (GradingVFD2) is running
+	Step4_State := 10;
+END_IF
+	
+	
+	
+// ----------------------- RUN ----------------------	
+10:
+	
+	EvenEnderFWD := TRUE;     //EvenEnder motor to run forward.
+	
+IF NOT GradingVFD2FWD OR NOT Permissive OR NOT LocalSafety_4 THEN       // Return to IDLE if the upstream conveyor stops, or if a permissive/localsafety input is lost.
+	EvenEnderFWD := FALSE;	
+	Step4_State := 0;
+		
+END_IF
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+END_CASE]]></ST>
+    </Implementation>
+    <LineIds Name="Step_4_EvenEnder">
+      <LineId Id="8" Count="3" />
+      <LineId Id="18" Count="1" />
+      <LineId Id="23" Count="4" />
+      <LineId Id="20" Count="0" />
+      <LineId Id="33" Count="3" />
+      <LineId Id="32" Count="0" />
+      <LineId Id="86" Count="0" />
+      <LineId Id="39" Count="0" />
+      <LineId Id="53" Count="0" />
+      <LineId Id="40" Count="0" />
+      <LineId Id="47" Count="3" />
+      <LineId Id="42" Count="4" />
+      <LineId Id="41" Count="0" />
+      <LineId Id="55" Count="1" />
+      <LineId Id="52" Count="0" />
+      <LineId Id="82" Count="0" />
+      <LineId Id="57" Count="0" />
+      <LineId Id="80" Count="0" />
+      <LineId Id="79" Count="0" />
+      <LineId Id="60" Count="17" />
+      <LineId Id="51" Count="0" />
+      <LineId Id="38" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

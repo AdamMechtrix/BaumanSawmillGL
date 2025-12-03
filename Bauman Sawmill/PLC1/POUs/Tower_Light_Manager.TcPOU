@@ -1,0 +1,75 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="Tower_Light_Manager" Id="{4ebeef18-f050-48ea-88b7-67077913b736}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK PUBLIC Tower_Light_Manager
+VAR_INPUT
+// Any steps that ask for the inputs below
+	RedFlash  : BOOL;    
+	RedSteady  : BOOL;  
+    YellowSteady   : BOOL;
+	YellowFlash  : BOOL;   
+    GreenSteady     : BOOL; 
+	GreenFlash    : BOOL;  
+    BlinkPeriod  : TIME := T#500MS; // configurable
+END_VAR
+VAR_OUTPUT
+	RedOut    : BOOL;
+    YellowOut : BOOL;
+    GreenOut  : BOOL;
+END_VAR
+VAR
+	tBlink : TON;
+    blink  : BOOL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[RedOut    := FALSE;
+YellowOut := FALSE;
+GreenOut  := FALSE;
+
+
+
+
+//  only run while flashing
+IF RedFlash OR YellowFlash OR GreenFlash THEN
+	tBlink(IN := TRUE, PT := BlinkPeriod);
+	IF tBlink.Q THEN
+	blink := NOT blink;
+	tBlink(IN := FALSE); // retrigger
+	END_IF;
+ELSE
+	tBlink(IN := FALSE);   // stop timer when not flashing
+	blink := FALSE;        
+END_IF;
+
+
+
+
+
+IF RedFlash THEN
+    RedOut := blink;                   // flashing red
+ELSIF RedSteady THEN
+    RedOut := TRUE;                    // steady red
+ELSIF YellowSteady THEN
+    YellowOut := TRUE;                 // steady yellow
+ELSIF YellowFlash THEN
+    YellowOut := blink;                // flashing yellow
+ELSIF GreenSteady THEN
+    GreenOut := TRUE;                  // steady green
+ELSIF GreenFlash THEN
+    GreenOut := blink;                 // flashing green
+ELSE
+   YellowOut := TRUE;  // nothing requested -> YellowOut Default
+END_IF;
+]]></ST>
+    </Implementation>
+    <LineIds Name="Tower_Light_Manager">
+      <LineId Id="3" Count="28" />
+      <LineId Id="57" Count="1" />
+      <LineId Id="32" Count="1" />
+      <LineId Id="59" Count="1" />
+      <LineId Id="34" Count="2" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

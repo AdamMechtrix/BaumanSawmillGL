@@ -1,0 +1,227 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="Step_1_TiltHoist" Id="{f9d5ad0c-fe0e-4c47-83d6-0dcdbd2757c5}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM Step_1_TiltHoist // Tilt Hoist
+VAR
+    // Edge detectors
+    rtStart : R_TRIG;      // Rising edge Cycle Start
+    rtStop  : R_TRIG;      // Rising edge Cycle Stop
+    ftPhotoEye    : F_TRIG;      // Falling edge on optical sensor
+
+    // Timers 
+    tPause  : TON;         // 10 second pause after each falling edge
+	tStep2OFFSignal : TON;      // 
+   
+    
+
+    // Internals 
+    LocalSafety_1 : BOOL;         //  Local Safety Conditions   
+	JOGTiltHoistFWD : BOOL;    // set from HMI
+	JOGTiltHoistREV : BOOL;    // set from HMI
+   
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// Safety
+LocalSafety_1 := TiltHoistMMP;
+
+ 
+// Defaults: make outputs known each scan
+Step1_RedFlash    := FALSE;
+Step1_RedSteady    := FALSE;
+Step1_YellowSteady := FALSE;
+Step1_YellowFlash := FALSE;
+Step1_GreenSteady  := FALSE;
+Step1_GreenFlash  := FALSE;
+TiltHoistFWD := FALSE;
+TiltHoistREV := FALSE;
+
+// Edge detect PBs and Optical falling edge
+rtStart(CLK := CycleStartPB);
+rtStop(CLK := CycleStopPB);
+ftPhotoEye(CLK := OpticalSensor); // TRUE for one scan when optical goes 1 -> 0 (falling)
+
+
+// Stop button or lost permissive or lost local safety → go to IDLE immediately
+IF rtStop.Q OR NOT Permissive OR NOT LocalSafety_1 THEN
+    Step1_State := 0; // IDLE
+END_IF	
+
+// unscramblerboard detected for a few seconds, turn off tilt hoist feeding it.
+IF UnscramblerBoardDetected THEN
+    Step1_State := 5; // Stop
+END_IF	
+	
+
+// Stick machine top limit or step2 yellow flash, wait for operator, stickmachine is full		
+IF StickMachine_TopLimit OR Step2_YellowFlash THEN
+	Step1_State := 40;	
+END_IF
+
+// -------------------- Manual override (when AutoMode = FALSE) ------------------
+IF NOT AutoMode THEN
+    // Simple, safe manual jogs
+    IF JOGTiltHoistFWD AND NOT JOGTiltHoistREV AND NOT TopLimitSwitch THEN
+        TiltHoistFWD := TRUE;
+    END_IF
+
+    IF JOGTiltHoistREV AND NOT JOGTiltHoistFWD AND NOT BottomLimitSwitch THEN
+        TiltHoistREV := TRUE;
+    END_IF
+
+    // Tower lights in manual: Yellow
+    IF NOT AutoMode THEN
+        Step1_YellowSteady := TRUE;
+    END_IF
+
+    RETURN;    // skips Auto sequence when in manual
+END_IF
+
+// -------------------- AUTO SEQUENCE --------------------
+CASE Step1_State OF
+    0:  // IDLE / READY / STOPPED
+       
+ 		Step1_YellowSteady := TRUE; // IDLE / READY / STOPPED
+		
+		TiltHoistFWD := FALSE;
+		TiltHoistREV := FALSE;
+		
+		// Make sure pause timer is reset while idle
+        tPause(IN := FALSE);
+		
+			
+        // Start cycle when forklift driver presses CycleStart
+        IF rtStart.Q AND Permissive AND LocalSafety_1 THEN
+            Step1_State := 10;  // begin Forward cycle
+        END_IF
+		
+		
+	5:  // STOPPED from step3 unscrambler board detected
+       
+ 		Step1_GreenSteady := TRUE; // IDLE / READY / STOPPED
+		
+		TiltHoistFWD := FALSE;
+		TiltHoistREV := FALSE;
+		
+		(*tStep2OffSignal(IN:= TRUE, PT := T#2M); // If board is detected for too long at the unscrambler then tilt hoist stops and timer start for stick machine to turn off
+		Step2OffSignal := tStep2OffSignal.Q;	  // step2offsignal is global var and goes to step_2 case:10 conditions*)
+			
+        // Start cycle when forklift driver presses CycleStart
+		
+		IF NOT UnscramblerBoardDetected AND Permissive AND LocalSafety_1 THEN
+            Step1_State := 10;  // begin Forward cycle
+		END_IF
+				
+		
+
+    10: // AUTO FWD (advance until optical falling edge, then pause)
+	Step1_RedFlash    := FALSE;
+	Step1_RedSteady    := FALSE;
+	Step1_YellowSteady := FALSE;
+	Step1_YellowFlash := FALSE;
+	Step1_GreenSteady  := TRUE;
+	Step1_GreenFlash  := FALSE;       // Running
+
+        // Drive forward unless top limit TRUE
+        IF NOT TopLimitSwitch THEN
+            TiltHoistFWD := TRUE;
+        END_IF
+
+        // If the top is reached → go to return
+        IF TopLimitSwitch THEN
+            TiltHoistFWD := FALSE;
+            Step1_State := 30; // reverse to bottom
+			
+        // Every falling edge of the optical sensor -> pause 10s, then continue
+        ELSIF ftPhotoEye.Q THEN
+            TiltHoistFWD := FALSE;
+            Step1_State := 20; // pause state
+        END_IF
+
+    20: // PAUSE 10s after a layer drops
+        Step1_GreenSteady := TRUE;
+        tPause(IN := TRUE, PT := T#5S);
+
+        IF tPause.Q THEN
+            // Pause done -> continue forward again
+            tPause(IN := FALSE);
+            Step1_State := 10;
+        END_IF
+
+    30: // RETURN REVERSE to bottom at end of cycle
+        Step1_GreenSteady := TRUE;
+
+        IF NOT BottomLimitSwitch THEN
+            TiltHoistREV := TRUE;
+        ELSE
+            TiltHoistREV := FALSE;
+            Step1_State := 40; // reached bottom limit switch
+        END_IF
+
+    40: // COMPLETE: flash RED to signal done, wait for operator
+        
+    Step1_RedFlash    := FALSE;
+	Step1_RedSteady    := FALSE;
+	Step1_YellowSteady := FALSE;
+	Step1_YellowFlash := TRUE;
+	Step1_GreenSteady  := FALSE;
+	Step1_GreenFlash  := FALSE;
+
+        // Operator can press Start to begin a new auto cycle
+        IF rtStart.Q AND Permissive AND LocalSafety_1 THEN
+            Step1_YellowFlash := FALSE;
+            Step1_State := 10;         // start next cycle forward
+        END_IF
+
+        
+END_CASE
+
+
+
+
+
+
+
+
+
+
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="Step_1_TiltHoist">
+      <LineId Id="3" Count="3" />
+      <LineId Id="8" Count="3" />
+      <LineId Id="165" Count="0" />
+      <LineId Id="12" Count="0" />
+      <LineId Id="166" Count="0" />
+      <LineId Id="13" Count="11" />
+      <LineId Id="159" Count="0" />
+      <LineId Id="199" Count="0" />
+      <LineId Id="203" Count="0" />
+      <LineId Id="201" Count="1" />
+      <LineId Id="200" Count="0" />
+      <LineId Id="156" Count="0" />
+      <LineId Id="182" Count="0" />
+      <LineId Id="180" Count="0" />
+      <LineId Id="157" Count="1" />
+      <LineId Id="25" Count="33" />
+      <LineId Id="60" Count="3" />
+      <LineId Id="163" Count="0" />
+      <LineId Id="64" Count="0" />
+      <LineId Id="184" Count="6" />
+      <LineId Id="205" Count="1" />
+      <LineId Id="194" Count="1" />
+      <LineId Id="208" Count="0" />
+      <LineId Id="210" Count="0" />
+      <LineId Id="209" Count="0" />
+      <LineId Id="198" Count="0" />
+      <LineId Id="67" Count="0" />
+      <LineId Id="161" Count="0" />
+      <LineId Id="68" Count="1" />
+      <LineId Id="167" Count="4" />
+      <LineId Id="73" Count="39" />
+      <LineId Id="172" Count="4" />
+      <LineId Id="116" Count="20" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

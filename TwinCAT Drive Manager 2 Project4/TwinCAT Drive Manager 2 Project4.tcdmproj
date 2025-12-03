@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Name>Drive Manager 2</Name>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{6a6c60d7-3db2-475b-acd4-ae5f98b6ce4c}</ProjectGuid>
+    <TcPath>
+    </TcPath>
+    <AssemblyName>TwinCAT Drive Manager 2 Project4</AssemblyName>
+    <RootNamespace>TwinCAT Drive Manager 2 Project4</RootNamespace>
+  </PropertyGroup>
+</Project>
